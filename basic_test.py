@@ -5,26 +5,25 @@ import networkx as nx
 import numpy as np
 from scipy.stats import norm
 
-def GAW(weights, metric='gaw'):
+def GAW(weights):
     """Computes the GAW statistics of a set of edge weights.
     Parameters:
     ------
         weights: array-like, a set of weights
-        metric: str, default `gaw`, options `gaw`, `gaw10` and `gaw20`. The type of GAW to compute.
     
     Returns:
     --------
         gaw: float, the GAW statistics.
     """
     ordered_weights = sorted(weights, reverse=True)
-    proportion = len(weights)
-    if metric in ['gaw10', 'GAW10']:
-        proportion = np.ceil(0.1 * len(weights))
-    elif metric in ['gaw20', 'GAW20']:
-        proportion = np.ceil(0.2 * len(weights))
-    prod = np.prod(ordered_weights[:proportion])
-    gaw = np.power(prod, 1./proportion)
-    return gaw
+
+    gaws = []
+    for proportion in [1, 0.1, 0.2]:
+        crop_len = np.ceil(proportion * len(weights))
+        gaw = np.prod(ordered_weights[:crop_len])
+        gaw = np.power(gaw, 1./crop_len)
+        gaws.append(gaw)
+    return gaws
 
 def monte_carlo_sampler(n_edges, all_weights, n_samples=10000):
     """A Monte-Carlo simulator to generate random GAW statistics.
@@ -41,12 +40,9 @@ def monte_carlo_sampler(n_edges, all_weights, n_samples=10000):
     gaws = [[], [], []]
     for _ in range(n_samples):
         sampled_weights = np.random.choice(all_weights, n_edges, replace=True)
-        gaw = GAW(sampled_weights, metric='gaw')
-        gaws[0].append(gaw)
-        gaw10 = GAW(sampled_weights, metric='gaw10')
-        gaws[1].append(gaw10)
-        gaw20 = GAW(sampled_weights, metric='gaw20')
-        gaws[2].append(gaw20)
+        gaws_sample = GAW(sampled_weights)
+        for i in range(3):
+            gaws[i].append(gaws_sample[i])
     return [(np.mean(gaws[i]), np.std(gaws[i])) for i in range(3)]
 
 def compute_p(value, avg, std):
@@ -78,9 +74,9 @@ def compute_node_gaw_scores(edges, null_params):
     gaussian_params = null_params[n_edges]
 
     p_values = [0, 0, 0]
-    for i, metric in enumerate(['gaw', 'gaw10', 'gaw20']):
-        node_gaw = GAW(edges, metric)
-        p_values[i] = compute_p(node_gaw, gaussian_params[i][0], gaussian_params[i][1])
+    node_gaws = GAW(edges)
+    for i in range(3):
+        p_values[i] = compute_p(node_gaws[i], gaussian_params[i][0], gaussian_params[i][1])
     
     scores = [norm.ppf(1-p) if p<0.05 else 0 for p in p_values]
     return scores
@@ -104,7 +100,7 @@ def basic_test(G):
 
     scores = {}
     for node in G.nodes():
-        node_score_dict = {}
+        node_score_dict = {}  # to store different scores of this node
         edge_weights = [data[3] for data in G.in_edges(node, data='weight')] + [data[3] for data in G.out_edges(node, data='weight')]
         gaw_scores = compute_node_gaw_scores(edge_weights, null_params)
         node_score_dict['gaw_score'] = gaw_scores[0]
