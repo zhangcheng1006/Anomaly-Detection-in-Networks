@@ -3,6 +3,7 @@ import numpy as np
 
 def ER_generator(n=10000, p=0.001, seed=2019):
     ER = nx.DiGraph()
+    ER.add_nodes_from(list(range(n)))
     edges = []
     np.random.seed(seed)
 
@@ -109,11 +110,13 @@ def draw_anomalies(graph, w=0.99, n_min=5, n_max=21, left=5, middle=3, right=1, 
         if anomaly_type == 4:
             print("Adding trees...")
             end_index = begin_index + left + middle + right
+            print(end_index)
             anomaly_graph = add_trees(anomaly_graph, nodes[begin_index:end_index], w, left, middle, right, omega)
             # begin_index = end_index
         else:
             size = np.random.randint(low=n_min, high=n_max)
             end_index = begin_index + size
+            print(end_index)
             # 0: rings
             if anomaly_type == 0:
                 print("Adding rings...")
