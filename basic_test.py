@@ -15,6 +15,7 @@ def GAW(weights):
     --------
         gaw: float, the GAW statistics.
     """
+    # print(type(weights[0]))
     ordered_weights = sorted(weights, reverse=True)
 
     gaws = []
@@ -92,7 +93,7 @@ def basic_test(G):
     """
     all_weights = list(nx.get_edge_attributes(G, 'weight').values())
     degrees = G.degree()
-    degree_values = [value for node, value in degrees]
+    degree_values = [value for node, value in degrees.items()]
     degree_avg = np.mean(degree_values)
     degree_std = np.std(degree_values)
     null_params = {degree: monte_carlo_sampler(degree, all_weights) for degree in set(degree_values)}
@@ -100,8 +101,9 @@ def basic_test(G):
     scores = {}
     for node in G.nodes():
         node_score_dict = {}  # to store different scores of this node
-        edge_weights = [data[2] for data in G.in_edges(node, data='weight')] + [data[2] for data in G.out_edges(node, data='weight')]
+        edge_weights = [data[2]['weight'] for data in G.in_edges(node, data='weight')] + [data[2] for data in G.out_edges(node, data='weight')]
         gaw_scores = compute_node_gaw_scores(edge_weights, null_params)
+
         node_score_dict['gaw_score'] = gaw_scores[0]
         G.node[node]['gaw_score'] = gaw_scores[0]
         node_score_dict['gaw10_score'] = gaw_scores[1]
