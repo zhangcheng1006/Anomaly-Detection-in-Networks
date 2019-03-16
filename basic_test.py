@@ -5,8 +5,35 @@ import networkx as nx
 import numpy as np
 from scipy.stats import norm
 
-def GAW(weights):
-    """Computes the GAW statistics of a set of edge weights.
+# def GAW(weights, mode="multi"):
+#     """Computes the GAW statistics of a set of edge weights.
+#     Parameters:
+#     ------
+#         weights: array-like, a set of weights
+    
+#     Returns:
+#     --------
+#         gaw: float, the GAW statistics.
+#     """
+#     # print(type(weights[0]))
+#     ordered_weights = sorted(weights, reverse=True)
+
+#     if mode == 'simple':
+#         crop_len = np.ceil(len(weights))
+#         gaw = np.prod(ordered_weights[:int(crop_len)])
+#         gaw = np.power(gaw, 1./crop_len)
+#         return gaw
+
+#     gaws = []    
+#     for proportion in [1, 0.1, 0.2]:
+#         crop_len = np.ceil(proportion * len(weights))
+#         gaw = np.prod(ordered_weights[:int(crop_len)])
+#         gaw = np.power(gaw, 1./crop_len)
+#         gaws.append(gaw)
+#     return gaws
+
+def GAW(weights, mode="multi"):
+    """Computes the GAW statistics of a set of edge weights. (Log-Exp version to avoid numerical error)
     Parameters:
     ------
         weights: array-like, a set of weights
@@ -18,11 +45,17 @@ def GAW(weights):
     # print(type(weights[0]))
     ordered_weights = sorted(weights, reverse=True)
 
-    gaws = []
+    if mode == 'simple':
+        crop_len = np.ceil(len(weights))
+        gaw = np.sum(np.log(ordered_weights[:int(crop_len)]))
+        gaw = np.exp(gaw/crop_len)
+        return gaw
+
+    gaws = []    
     for proportion in [1, 0.1, 0.2]:
         crop_len = np.ceil(proportion * len(weights))
-        gaw = np.prod(ordered_weights[:int(crop_len)])
-        gaw = np.power(gaw, 1./crop_len)
+        gaw = np.sum(np.log(ordered_weights[:int(crop_len)]))
+        gaw = np.exp(gaw/crop_len)
         gaws.append(gaw)
     return gaws
 
