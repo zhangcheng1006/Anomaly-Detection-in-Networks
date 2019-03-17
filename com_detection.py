@@ -106,7 +106,7 @@ def compute_third_density(graph, communities, num_sampler):
     for com, sub_g in communities.items():
         density = nx.density(sub_g)
         p_value = compute_p(density, mean, std)
-        if p_value >= 0.05:
+        if p_value >= 0.5:
             score = 0
         else:
             score = norm.ppf(1 - p_value)

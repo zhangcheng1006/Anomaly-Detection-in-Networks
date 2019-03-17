@@ -30,6 +30,7 @@ def add_rings(graph, nodes_to_add, w):
 
 
 def add_paths(graph, nodes_to_add, w):
+    print(nodes_to_add)
     for j in range(len(nodes_to_add) - 1):
         weight = np.random.rand() * (1 - w) + w
         graph.add_weighted_edges_from([(nodes_to_add[j], nodes_to_add[j+1], weight)])
