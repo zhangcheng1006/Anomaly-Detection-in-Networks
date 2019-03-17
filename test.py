@@ -1,4 +1,4 @@
-from generator import *
+from generator import ER_generator, draw_anomalies
 from basic_test import basic_test
 from com_detection import community_detection
 from path_finder import assign_path_score

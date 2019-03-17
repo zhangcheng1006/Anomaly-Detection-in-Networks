@@ -126,7 +126,7 @@ def basic_test(G):
     """
     all_weights = list(nx.get_edge_attributes(G, 'weight').values())
     degrees = G.degree()
-    degree_values = [value for node, value in degrees]
+    degree_values = [value for _, value in degrees]
     degree_avg = np.mean(degree_values)
     degree_std = np.std(degree_values)
     null_params = {degree: monte_carlo_sampler(degree, all_weights) for degree in set(degree_values)}
