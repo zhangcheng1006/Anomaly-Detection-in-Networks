@@ -8,14 +8,19 @@ def ER_generator(n=10000, p=0.001, seed=2019):
     np.random.seed(seed)
 
     for i in range(n):
-        nodes = list(range(i)) + list(range(i+1, n))
-        np.random.shuffle(nodes)
-        for e in nodes:
-            eps = np.random.rand()
-            if eps < p:
-                w = np.random.rand()
-                edges.append((i, e, w))
-
+        for j in range(n):
+            if j != i:
+                if np.random.rand() < p:
+                    edges.append((i, j, np.random.rand()))
+                if np.random.rand() < p:
+                    edges.append((j, i, np.random.rand()))
+        # nodes = list(range(i)) + list(range(i+1, n))
+        # np.random.shuffle(nodes)
+        # for e in nodes:
+        #     eps = np.random.rand()
+        #     if eps < p:
+        #         w = np.random.rand()
+        #         edges.append((i, e, w))
     ER.add_weighted_edges_from(edges)
     return ER
 
