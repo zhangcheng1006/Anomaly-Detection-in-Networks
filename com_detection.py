@@ -3,6 +3,7 @@ import numpy as np
 import community
 from basic_test import compute_p, GAW
 from scipy.stats import norm
+from utils import to_undirected_graph
 
 def percentile(graph, q=99):
     all_weights = list(nx.get_edge_attributes(graph, 'weight').values())
@@ -36,7 +37,7 @@ def augmentation(graph, threshold):
 
 def get_partition(graph):
     #first compute the best partition
-    partition = community.best_partition(graph.to_undirected())
+    partition = community.best_partition(to_undirected_graph(graph))
     # print(partition)
     num_communities = float(len(set(partition.values())))
     communities = {}
@@ -94,7 +95,7 @@ def get_null_distribution(graph, num_sampler):
         np.random.shuffle(all_weights)
         for i, edge in enumerate(g.edges()):
             g.adj[edge[0]][edge[1]]['weight'] = all_weights[i]
-        communities = get_partition(g.to_undirected())
+        communities = get_partition(to_undirected_graph(g))
         choice = np.random.randint(len(communities.keys()))
         all_densities.append(nx.density(communities[choice]))
     mean = np.mean(all_densities)

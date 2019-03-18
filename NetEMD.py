@@ -34,6 +34,9 @@ netdist = rpackages.importr('netdist')
 
 import numpy as np
 import scipy.stats as stats
+import community
+from utils import to_undirected_graph, generate_null_model
+from com_detection import get_partition
 
 motif_dict = {  ((0, 2), (1, 0), (1, 0)): 4, 
                 ((0, 1), (0, 1), (2, 0)): 5, 
@@ -91,6 +94,7 @@ def compute_NetEMD(g1, g2, stat):
     dist = netdist.net_emd(dhist1, dhist2)
 
 def assign_NetEMD_score(graph, num_references=15, num_samples=500):
+    communities = get_partition(graph)
 
 
 
