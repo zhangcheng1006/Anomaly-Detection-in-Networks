@@ -4,56 +4,9 @@ from scipy import sparse
 from scipy.stats import norm
 import networkx as nx
 import logging
+from utils import comm_eigenvectors
 
 logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-
-def break_tie_argsort(l, reverse=False):
-    """A re-implementation of np.argsort() addressing tied values:
-    when several values are tied, sort them randomly.
-    """
-    idx_l = list(enumerate(l))
-    np.random.shuffle(idx_l)    # to introduce randomness for tied values
-    sorted_idx_l = sorted(idx_l, key=lambda x: x[1], reverse=reverse)
-    return [idx for idx, v in sorted_idx_l]
-
-def comm_eigenvectors(comm, min_size=None):
-    if min_size is not None:
-        if len(comm.nodes()) < 2 * min_size:
-            logging.warning("Subnetwork size too small for generating enough null eigenvectors.")
-            return None
-    W = nx.adjacency_matrix(comm)
-    W_sym = W + W.T
-    D = np.diag(np.array(W_sym.sum(axis=1)).flatten())
-    D = sparse.csr_matrix(D)
-    L_comb = D - W_sym
-    L_rw = sparse.linalg.inv(D).dot(sparse.csc_matrix(W_sym))
-    # eigen vectors
-    if W.shape[0] > 40:
-        logging.info("Using sparse method to compute eigen vectors")
-        _, W_vectors_upper = sparse.linalg.eigs(W_sym, k=20, which='SM')
-        logging.info("Using sparse method to compute eigen vectors")
-        _, W_vectors_lower = sparse.linalg.eigs(W_sym, k=20, which='LM')
-    else:
-        W_values, W_vectors = scipy.linalg.eig(W_sym.toarray())
-        W_sort_index = break_tie_argsort(W_values)
-        middle = len(W_values) // 2
-        W_vectors_upper = W_vectors[:, W_sort_index[:middle]] # small eigen values
-        W_vectors_lower = W_vectors[:, W_sort_index[middle:][::-1]]   # big eigen values
-    if W.shape[0] > 21:
-        logging.info("Using sparse method to compute eigen vectors")
-        _, comb_vectors = sparse.linalg.eigs(L_comb, k=21, which='SM')
-        comb_vectors = comb_vectors[:, 1:]
-        logging.info("Using sparse method to compute eigen vectors")
-        _, rw_vectors = sparse.linalg.eigs(L_rw, k=21, which='LM')
-        rw_vectors = rw_vectors[:, 1:]
-    else:
-        comb_values, comb_vectors = scipy.linalg.eig(L_comb.toarray())
-        comb_sort_index = break_tie_argsort(comb_values)
-        comb_vectors = comb_vectors[:, comb_sort_index[1:21]]
-        rw_values, rw_vectors = scipy.linalg.eig(L_rw.toarray())
-        rw_sort_index = break_tie_argsort(rw_values, reverse=True)
-        rw_vectors = rw_vectors[:, rw_sort_index[1:21]]
-    return W_vectors_upper, W_vectors_lower, comb_vectors, rw_vectors
 
 def null_norm_based_params(null_vectors):
     """Gets useful statistic parameters on the null eigenvectors.
