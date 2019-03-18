@@ -11,41 +11,49 @@ import logging
 logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 def to_undirected_graph(G):
-    if isinstance(G, nx.classes.graph.Graph):
-        return G
-    else:
+    if isinstance(G, nx.classes.digraph.DiGraph):
         W = nx.adj_matrix(G)
         W_sym = W + W.T
         G_undirected = nx.Graph(W_sym)
         return G_undirected
+    else:
+        return G
 
-def generate_null_model(num_models=10, min_size=40, n=10000, p=0.001, seed=2019, partition=True):
+def partition_graph(G):
+    """Partition a graph and return the nodes ressembled by community
+    """
+    Undir_graph = to_undirected_graph(G)
+    partitions = community.best_partition(Undir_graph)
+    num_comm = len(set(partitions.values()))
+    comm_nodes = [[] for _ in range(num_comm)]
+    for node, comm_id in partitions.items():
+        comm_nodes[comm_id].append(node)
+    return comm_nodes
+
+def generate_null_model(num_models=10, min_size=40, n=10000, p=0.001):
     """Generates a number of null modesl. If partition is True, 
     the graph is partitionned and only one community is chosen randomly.
     """
     models = []
     num_trials = 0
-    while len(models) <= num_models:
-        ER_graph = ER_generator(n, p, seed)
-        if not partition:
-            if nx.number_of_nodes(ER_graph) >= min_size:
-                models.append(ER_graph)
+    while len(models) < num_models:
+        logging.info("Generating {}-th null model".format(len(models)+1))
+        ER_graph = ER_generator(n, p, seed=None)
+        logging.info("Partitioning graph")
+        comm_nodes = partition_graph(ER_graph)
+        comm_nodes_ = [comm for comm in comm_nodes if len(comm)>=min_size]
+        if len(comm_nodes_) == 0:
+            logging.warning("No community with enough size, resampling")
+            if num_trials == 10:
+                logging.warning("Maximum trial reached, take currently biggest community")
+                comm = max(comm_nodes, key=len)
+                num_trials = 0
+            else:
+                num_trials += 1
         else:
-            partition = community.best_partition(to_undirected_graph(ER_graph))
-            num_comm = len(set(partition.values()))
-            comm_nodes = [[] for _ in range(num_comm)]
-            for node, comm_id in partition.items():
-                comm_nodes[comm_id].append(node)
-            comm_nodes_ = [comm for comm in comm_nodes if len(comm)>=min_size]
-            if len(comm_nodes_) == 0:
-                if num_trials == 10:
-                    comm = max(comm_nodes, key=len)
-                else:
-                    num_trials += 1
-                continue
-            random.shuffle(comm_nodes_)
-            for comm in comm_nodes_:
-                models.append(ER_graph.subgraph(comm))
+            num_trials = 0
+            comm = comm_nodes_[np.random.choice(range(len(comm_nodes_)))]
+            models.append(ER_graph.subgraph(comm).copy())
     return models
         
 def break_tie_argsort(l, reverse=False):
@@ -76,12 +84,12 @@ def comm_eigenvectors(comm, num_vectors=20):
         middle = len(W_values) // 2
         W_vectors_upper = W_vectors[:, W_sort_index[:middle]] # small eigen values
         W_vectors_lower = W_vectors[:, W_sort_index[middle:][::-1]]   # big eigen values
-    if W.shape[0] > 21:
+    if W.shape[0] > num_vectors+2:
         logging.info("Using sparse method to compute eigen vectors")
-        _, comb_vectors = sparse.linalg.eigs(L_comb, k=21, which='SM')
+        _, comb_vectors = sparse.linalg.eigs(L_comb, k=num_vectors+1, which='SM')
         comb_vectors = comb_vectors[:, 1:]
         logging.info("Using sparse method to compute eigen vectors")
-        _, rw_vectors = sparse.linalg.eigs(L_rw, k=21, which='LM')
+        _, rw_vectors = sparse.linalg.eigs(L_rw, k=num_vectors+1, which='LM')
         rw_vectors = rw_vectors[:, 1:]
     else:
         comb_values, comb_vectors = scipy.linalg.eig(L_comb.toarray())
@@ -91,7 +99,6 @@ def comm_eigenvectors(comm, num_vectors=20):
         rw_sort_index = break_tie_argsort(rw_values, reverse=True)
         rw_vectors = rw_vectors[:, rw_sort_index[1:21]]
     return W_vectors_upper, W_vectors_lower, comb_vectors, rw_vectors
-
 
 
     

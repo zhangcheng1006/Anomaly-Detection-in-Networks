@@ -32,18 +32,19 @@ def norm_based_localization_1(obs_vectors):
 def norm_based_localization_2(obs_vectors, null_max):
     null_max = null_max[:, :obs_vectors.shape[1]] # size: [m, 20]
     m = null_max.shape[0]
-    t_a = np.full(obs_vectors.shape, 1)  # size: [num_nodes, 20]
+    t_a = np.full(obs_vectors.shape, 1.0)  # size: [num_nodes, 20]
     for x in null_max: # x size: [20, ]
         t_a += (obs_vectors <= x)
     t_a /= (m + 1)
-    g2 = norm.ppf(1-t_a) * (t_a < 0.5)
+    t_a[np.where(t_a>=0.5)] = 0.5
+    g2 = norm.ppf(1-t_a)
     return g2
 
 def norm_based_localization_3(obs_vectors, null_mean, null_std):
     null_mean = null_mean[:obs_vectors.shape[1]] # size: [20, ]
     null_std = null_std[:obs_vectors.shape[1]] # size: [20, ]
     p_value = norm.cdf(obs_vectors, loc=null_mean, scale=null_std)
-    inverse_cdf = norm.ppf(p_value)
+    inverse_cdf = norm.ppf(np.real(p_value))
     v_geq_null_mean = np.abs(obs_vectors) >= null_mean
     g3 = np.maximum(inverse_cdf, 0) * v_geq_null_mean
     return g3
@@ -215,7 +216,7 @@ def spectral_localization_features(comm, null_comms):
     null_rw = []
     for null_comm in null_comms:
         assert len(null_comm.nodes()) >= 40
-        null_u, null_l, null_c, null_r = comm_eigenvectors(comm, min_size=20)
+        null_u, null_l, null_c, null_r = comm_eigenvectors(comm, num_vectors=20)
         null_upper.append(null_u)
         null_lower.append(null_l)
         null_comb.append(null_c)
@@ -238,3 +239,4 @@ def spectral_localization_features(comm, null_comms):
         total_scores['{}_sign_stat_2'.format(name_prefix)] = np.sum(sign_2, axis=1)
         total_scores['{}_sign_equal_1'.format(name_prefix)] = np.sum(sign_eq_1, axis=1)
         total_scores['{}_sign_equal_2'.format(name_prefix)] = np.sum(sign_eq_2, axis=1)
+    return total_scores
