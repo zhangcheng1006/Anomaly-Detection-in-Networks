@@ -9,8 +9,9 @@ def percentile(graph, q=99):
     all_weights = list(nx.get_edge_attributes(graph, 'weight').values())
     return np.percentile(all_weights, q)
 
-def augmentation(graph, threshold):
+def augmentation(graph):
     g = graph.copy()
+    threshold = percentile(graph, q=99)
     n = g.number_of_nodes()
     while True:
         finish = True
@@ -145,7 +146,7 @@ def compute_second_strength(graph, communities):
 
 def community_detection(graph, num_sampler=20, small_criterion=4):
     threshold = percentile(graph)
-    augmented_g = augmentation(graph, threshold)
+    augmented_g = augmentation(graph)
     communities = get_partition(augmented_g)
     graph = compute_first_density(graph, communities)
     graph = compute_second_density(graph, communities)

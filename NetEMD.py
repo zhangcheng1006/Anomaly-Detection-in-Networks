@@ -33,9 +33,11 @@ netdist = rpackages.importr('netdist')
 
 import numpy as np
 import community
-from utils import to_undirected_graph, generate_null_model
+import networkx as nx
+from utils import to_undirected_graph, generate_null_model, comm_eigenvectors
 from com_detection import get_partition
 from scipy.stats import norm
+from com_detection import augmentation
 
 motif_dict = {  ((0, 2), (1, 0), (1, 0)): 4, 
                 ((0, 1), (0, 1), (2, 0)): 5, 
@@ -66,7 +68,8 @@ def strength_stats(graph, communities):
             graph.node[node]['in_out_strength'] = graph.node[node]['in_strength'] + graph.node[node]['out_strength']
     return graph
 
-def get_motif(g, motif_dict):
+def get_motif(g):
+    global motif_dict
     in_degrees = [in_degree for node, in_degree in g.in_degree()]
     out_degrees = [out_degree for node, out_degree in g.out_degree()]
     res = sorted(zip(in_degrees, out_degrees), key=lambda x: (x[0], x[1]))
@@ -103,14 +106,28 @@ def compute_NetEMD(g1, g2, stat):
     return dist
 
 def assign_NetEMD_score(graph, num_references=15, num_samples=500):
+    global stats
     communities = get_partition(graph).values()
     num_communities = len(communities)
     references = generate_null_model(num_models=num_references, min_size=5)
     samples = generate_null_model(num_models=num_samples, min_size=5)
     graph = strength_stats(graph, communities)
+    graph_aug = augmentation(graph)
+    communities_aug = get_partition(graph_aug).values()
     graph = motif_stats(graph, communities)
+    graph = matrix_stats(graph, communities)
+    for idx, _ in enumerate(references):
+        references[idx] = strength_stats(references[idx], [references[idx]])
+        references[idx] = motif_stats(references[idx], [references[idx]])
+    for idx, _ in enumerate(samples):
+        samples[idx] = strength_stats(samples[idx], [samples[idx]])
+        samples[idx] = strength_stats(samples[idx], [samples[idx]])
 
-    #TODO
+
+    graph_aug = augmentation(graph)
+    NetEMD_matrix_stats = matrix_stats(graph, references)
+    # TODO: if reference augmented, resample
+
 
     y_M = np.zeros((num_samples, 36))
     for i in range(36):
@@ -132,7 +149,7 @@ def assign_NetEMD_score(graph, num_references=15, num_samples=500):
             dists.remove(max(dists))
             y[j, i] = np.mean(dists)
 
-            p_value = sum(y_M[:, i] > y[j, i]) / num_samples
+            p_value = (sum(y_M[:, i] > y[j, i])+1) / num_samples
             if p_value >= 0.05:
                 for node in sub_g.nodes():
                     graph.node[node]['NetEMD_score_1_'+str(i+1)] = 0
@@ -169,5 +186,39 @@ def assign_NetEMD_score(graph, num_references=15, num_samples=500):
             graph.node[node]['Compact_NetEMD_score_2_'+str(i+1)] = value2
 
     return graph
-                
 
+def matrix_stats(graph, communities):
+    for sub_g in communities:
+        nodes = sub_g.nodes()
+        matrices = comm_eigenvectors(sub_g, num_vectors=5)
+        matrices_name = ['upper', 'lower', 'comb', 'rw']
+        for matrix_name, vectors in zip(matrices_name, matrices):
+            vectors_dir_norm = direction_eigenvectors(vectors)
+            for col in range(5):
+                for node_id, node in enumerate(nodes):
+                    graph.node[node]['{}_{}_netemd'.format(matrix_name, col+1)] = vectors_dir_norm[node_id, col]
+    return graph
+
+
+
+def direction_eigenvectors(vectors_origine):
+    """Normalize the direction of the eigenvectors according to Appendix.D
+    vectors is a 2D matrix, each column an eigen vector
+    """
+    vectors = vectors_origine.copy()
+    num_pos = np.sum(vectors>0, axis=0)
+    num_neg = np.sum(vectors<0, axis=0)
+    direction = num_pos >= num_neg
+    vectors *= direction
+    equal_cols = np.where(num_pos == num_neg)
+    for eq_col in equal_cols:
+        v = vectors[:, eq_col].copy()
+        v_2 = np.power(v, 2)
+        while True:
+            if sum(v) < 0:
+                vectors[:, eq_col] *= -1
+                break
+            elif sum(v) > 0:
+                break
+            v *= v_2
+    return vectors

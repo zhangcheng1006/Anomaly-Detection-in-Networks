@@ -6,6 +6,7 @@ from scipy.stats import norm
 import networkx as nx
 import community
 from generator import ER_generator
+from com_detection import augmentation
 import logging
 
 logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -30,7 +31,7 @@ def partition_graph(G):
         comm_nodes[comm_id].append(node)
     return comm_nodes
 
-def generate_null_model(num_models=10, min_size=40, n=10000, p=0.001):
+def generate_null_model(num_models=10, min_size=40, n=10000, p=0.001, augment=False):
     """Generates a number of null modesl. If partition is True, 
     the graph is partitionned and only one community is chosen randomly.
     """
@@ -39,6 +40,8 @@ def generate_null_model(num_models=10, min_size=40, n=10000, p=0.001):
     while len(models) < num_models:
         logging.info("Generating {}-th null model".format(len(models)+1))
         ER_graph = ER_generator(n, p, seed=None)
+        if augment:
+            ER_graph = augmentation(ER_graph)
         logging.info("Partitioning graph")
         comm_nodes = partition_graph(ER_graph)
         comm_nodes_ = [comm for comm in comm_nodes if len(comm)>=min_size]
