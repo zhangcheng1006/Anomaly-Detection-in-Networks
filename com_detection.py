@@ -3,7 +3,7 @@ import numpy as np
 import community
 from basic_test import compute_p, GAW
 from scipy.stats import norm
-from utils import to_undirected_graph
+# from utils import to_undirected_graph
 
 def percentile(graph, q=99):
     all_weights = list(nx.get_edge_attributes(graph, 'weight').values())

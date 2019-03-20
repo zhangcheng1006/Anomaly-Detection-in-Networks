@@ -32,9 +32,10 @@ netdist = rpackages.importr('netdist')
 import numpy as np
 import community
 import networkx as nx
-from utils import to_undirected_graph, generate_null_model, comm_eigenvectors, partition_graph
+from utils import generate_null_model, comm_eigenvectors, partition_graph
 from scipy.stats import norm
 from com_detection import augmentation
+from generator import *
 import logging
 
 logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -63,17 +64,24 @@ stats = ['in_strength', 'out_strength', 'in_out_strength', 'motif_4_stat', 'moti
 # compute Hist
 
 def NetEMD_to_ref(stat, ref_stats):
-    stat_values = stat.values()
-    dist = [compute_NetEMD(stat_values, ref.values()) for ref in ref_stats]
+    dist = [compute_NetEMD(stat, ref.values()) for ref in ref_stats]
     dist.remove(min(dist))
     dist.remove(max(dist))
     return np.mean(dist)
+
+def compute_NetEMD(u1, u2):
+    h1 = np.histogram(list(u1), bins='auto', density=True)
+    h2 = np.histogram(list(u2), bins='auto', density=True)
+    dhist1 = netdist.dhist(h1[1], h1[0])
+    dhist2 = netdist.dhist(h2[1], h2[0])
+    dist = netdist.net_emd(dhist1, dhist2)
+    return dist
 
 def NetEMD_score(obs_stat, ref_stats, null_stats):
     # dicts
     # ref_stats, null_stats already normalized
     # return dictionary
-    obs_values = np.array(obs_stat.values())
+    obs_values = np.array(list(obs_stat.values()))
     obs_mean = np.mean(obs_values)
     assert isinstance(obs_mean, float)
     obs_std = np.std(obs_values)
@@ -102,11 +110,12 @@ def compute_strength(g, strength_type=None, normalize=False):
     else:
         strength = dict(g.degree(weight='weight'))
     if normalize:
-        values = strength.values()
+        values = np.array(list(strength.values()))
         normed = values / np.std(values)
         return {node: v for node, v in zip(strength.keys(), normed)}
+    return strength
 
-def strength_score(g, references, null_samples):
+def compute_strength_score(g, references, null_samples):
     """Compute one statistics on a graph(subgraph)
     """
     # in strength
@@ -157,7 +166,7 @@ def compute_motif_stat(g, normalize=False):
         # yield a dict
         yield {node: motif_stat for node, motif_stat in zip(nodes, stats[:, i])}
 
-def motif_score(g, references, null_samples):
+def compute_motif_score(g, references, null_samples):
     obs_stat = compute_motif_stat(g)
     ref_stats = [compute_motif_stat(ref, normalize=True) for ref in references] # list of generators
     null_stats = [compute_motif_stat(n_samp, normalize=True) for n_samp in null_samples]
@@ -207,7 +216,7 @@ def compute_matrix_stat(g, normalize=False):
             matrix_stats[idx].append(matrix_stat)
     return matrix_stats
 
-def matrix_score(g, references, null_samples):
+def compute_matrix_score(g, references, null_samples):
     nodes = g.nodes()
     obs_stat = compute_matrix_stat(g) # 4 * 5 dicts
     ref_stats = [compute_matrix_stat(ref, normalize=True) for ref in references]
@@ -224,14 +233,6 @@ def matrix_score(g, references, null_samples):
         matrix_scores.append((dict(zip(nodes, matrix_score[0])), dict(zip(nodes, matrix_score[1]))))
     return matrix_scores
 
-def compute_NetEMD(u1, u2):
-    h1 = np.histogram(u1, bins='auto', density=True)
-    h2 = np.histogram(u2, bins='auto', density=True)
-    dhist1 = netdist.dhist(h1[1], h1[0])
-    dhist2 = netdist.dhist(h2[1], h2[0])
-    dist = netdist.net_emd(dhist1, dhist2)
-    return dist
-
 def NetEMD_features(graph, num_references=15, num_samples=500, n=10000, p=0.001):
     global stats
     logging.info("partition graph")
@@ -243,14 +244,14 @@ def NetEMD_features(graph, num_references=15, num_samples=500, n=10000, p=0.001)
     null_samples = generate_null_model(num_models=num_samples, min_size=5, n=n, p=p)
     for comm_idx, community in enumerate(communities):
         logging.info("computing strength scores for community No.{}".format(comm_idx))
-        strength_scores = strength_score(community, references, null_samples)
+        strength_scores = compute_strength_score(community, references, null_samples)
         strength_names = ['in_strength_1', 'in_strength_2', 'out_strength_1', 'out_strength_2', 'in_out_strength_1', 'in_out_strength_2']
         for strength_name, strength_score in zip(strength_names, strength_scores):
             for node, score in strength_score.items():
                 assert graph[node].get(strength_name) is None
                 graph[node][strength_name] = score
         logging.info("computing motif scores for community No.{}".format(comm_idx))
-        motif_scores = motif_score(community, references, null_samples)
+        motif_scores = compute_motif_score(community, references, null_samples)
         for idx in range(13):
             motif_score = motif_scores[idx]
             motif_id = idx + 4
@@ -270,11 +271,15 @@ def NetEMD_features(graph, num_references=15, num_samples=500, n=10000, p=0.001)
     matrix_names = ['upper', 'lower', 'comb', 'rw']
     for comm_idx, community in enumerate(communities_aug):
         logging.info("computing matrix scores for community No.{}".format(comm_idx))
-        matrix_scores = matrix_score(community, references_aug, null_samples_aug) # 4 tuples of (score1, score2)
+        matrix_scores = compute_matrix_score(community, references_aug, null_samples_aug) # 4 tuples of (score1, score2)
         for matrix_idx, matrix_name in enumerate(matrix_names):
             for node in community.nodes():
                 graph[node]['{}_1'.format(matrix_name)] = matrix_scores[matrix_idx][0][node]
                 graph[node]['{}_2'.format(matrix_name)] = matrix_scores[matrix_idx][1][node]
     
     return graph
+
+graph = ER_generator(n=500, p=0.005, seed=None)
+graph = draw_anomalies(graph)
+graph = NetEMD_features(graph, num_references=2, num_samples=2, n=500)
 
