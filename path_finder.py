@@ -128,7 +128,10 @@ def path_features(graph, null_samples, num_samples=500, min_path=2, max_path=20,
         
         for path in paths:
             weight = sum(path[0][1])
-            p_value = compute_p(weight, null_mean[path_size-2], null_std[path_size-2])
+            if null_std[path_size-2] == 0:
+                p_value = weight <= null_mean[path_size-2]
+            else:
+                p_value = compute_p(weight, null_mean[path_size-2], null_std[path_size-2])
             if p_value >= 0.5:
                 score = 0
             else:

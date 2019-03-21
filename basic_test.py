@@ -91,6 +91,7 @@ def compute_p(value, avg, std):
     --------
         p_value: float, the computed p-value
     """
+    
     return 1 - norm.cdf(value, loc=avg, scale=std)
 
 def compute_node_gaw_scores(edges, null_params):
