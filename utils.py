@@ -8,6 +8,8 @@ import community
 from generator import ER_generator
 from com_detection import augmentation
 import logging
+from scipy.special import comb
+from math import factorial
 
 logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -103,6 +105,48 @@ def comm_eigenvectors(comm, num_vectors=20):
         rw_vectors = rw_vectors[:, rw_sort_index[1:21]]
     return W_vectors_upper, W_vectors_lower, comb_vectors, rw_vectors
 
+def verify_clique(p, w, n, k):
+    if w * p < 1 - (1 - comb(n, k)**(- 1. / comb(k, 2)))**0.5:
+        return True
+    return False
 
-    
+def verify_ring(p, w, n, k):
+    if w * p < (comb(n, k) * factorial(k-1))**(-1./k):
+        return True
+    return False
+
+def verify_path(p, w, n, k):
+    if w * p < (comb(n, k) * factorial(k))**(-1./(k-1)):
+        return True
+    return False
+
+def verify_star(p, w, n, k):
+    for k1 in range(k):
+        if not w * p < (comb(n, k) * comb(k, k1) * (k-k1)) ** (-1./(k-1)):
+            return False
+    return True
+
+def verify_tree(p, w, n):
+    if w * p < (4 * comb(n, 9) * comb(9, 5)) ** (-1./18):
+        return True
+    return False
+
+def get_parameters(n, ps, ws):
+    res = []
+    for p in ps:
+        for w in ws:
+            add = True
+            for k in range(5, 21):
+                if not verify_clique(p, w, n, k) or not verify_ring(p, w, n, k) or not verify_path(p, w, n, k) or not verify_star(p, w, n, k) or not verify_tree(p, w, n):
+                    add = False
+                    break
+            if add:
+                res.append((p, w))
+    return res
+
+ps = np.linspace(0.01, 0.05, num=5)
+ws = np.linspace(0.0, 0.01, num=11)
+
+res = get_parameters(2000, ps, ws)
+print(res)
 
