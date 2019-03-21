@@ -170,18 +170,11 @@ def comm_eigenvectors(comm, num_vectors=20, verbose=False):
         rw_vectors = rw_vectors[:, rw_sort_index[1:21]]
     return np.real(W_vectors_upper), np.real(W_vectors_lower), np.real(comb_vectors), np.real(rw_vectors)
 
-def verify_clique(p, w, n, k):
-    if w * p < 1 - (1 - comb(n, k)**(- 1. / comb(k, 2)))**0.5:
-        return True
-    return False
+
 def percentile(graph, q=99):
     all_weights = list(nx.get_edge_attributes(graph, 'weight').values())
     return np.percentile(all_weights, q)
 
-def verify_ring(p, w, n, k):
-    if w * p < (comb(n, k) * factorial(k-1))**(-1./k):
-        return True
-    return False
 def augmentation(graph):
     g = graph.copy()
     threshold = percentile(graph, q=99)
@@ -209,19 +202,20 @@ def augmentation(graph):
             break
     return g
 
+def verify_clique(p, w, n, k):
+    if w * p < 1 - (1 - comb(n, k)**(- 1. / comb(k, 2)))**0.5:
+        return True
+    return False
+
+def verify_ring(p, w, n, k):
+    if w * p < (comb(n, k) * factorial(k-1))**(-1./k):
+        return True
+    return False
+
 def verify_path(p, w, n, k):
     if w * p < (comb(n, k) * factorial(k))**(-1./(k-1)):
         return True
     return False
-# def precicion_recall(pred, real, *sample_sizes):
-#     pred = np.array(pred)
-#     real = np.array(real)
-#     right_anomaly = (real==1) & (pred==1)
-#     # for 
-#     num_anormaly_samples = np.sum(right_anomaly[:sample_size])
-#     prec = num_anormaly_samples / sample_size
-#     rec = num_anormaly_samples / np.sum(real)
-#     return pred, 
 
 def verify_star(p, w, n, k):
     for k1 in range(k):
@@ -246,6 +240,17 @@ def get_parameters(n, ps, ws):
             if add:
                 res.append((p, w))
     return res
+
+# def precicion_recall(pred, real, *sample_sizes):
+#     pred = np.array(pred)
+#     real = np.array(real)
+#     right_anomaly = (real==1) & (pred==1)
+#     # for 
+#     num_anormaly_samples = np.sum(right_anomaly[:sample_size])
+#     prec = num_anormaly_samples / sample_size
+#     rec = num_anormaly_samples / np.sum(real)
+#     return pred, 
+
 
 ps = np.linspace(0.01, 0.05, num=5)
 ws = np.linspace(0.0, 0.01, num=11)
