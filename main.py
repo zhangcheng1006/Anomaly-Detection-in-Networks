@@ -31,7 +31,7 @@ for model_id in range(num_models):
     p, w = candidate_parameters[np.random.choice(range(num_cand_param))]
     logging.info("Computing {}-th/{} model (p={}, w={})".format(model_id, num_models, p, w))
     graph = ER_generator(n=num_nodes, p=p, seed=None)
-    graph = draw_anomalies(graph, w=w)
+    graph = draw_anomalies(graph, w=1-w)
     _, references = generate_null_models(graph, num_models=num_references, min_size=20)
     null_samples_whole, null_samples = generate_null_models(graph, num_models=num_null_models, min_size=20)
 
