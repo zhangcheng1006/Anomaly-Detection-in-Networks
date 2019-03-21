@@ -3,38 +3,7 @@ import numpy as np
 import community
 from basic_test import compute_p, GAW
 from scipy.stats import norm
-# from utils import to_undirected_graph
-
-def percentile(graph, q=99):
-    all_weights = list(nx.get_edge_attributes(graph, 'weight').values())
-    return np.percentile(all_weights, q)
-
-def augmentation(graph):
-    g = graph.copy()
-    threshold = percentile(graph, q=99)
-    n = g.number_of_nodes()
-    while True:
-        finish = True
-        for i in range(n):
-            neighbors = g.neighbors(i)
-            for neighbor in neighbors:
-                w1 = g.get_edge_data(i, neighbor)['weight']
-                if w1 > threshold:
-                    hop2neighbors = g.neighbors(neighbor)
-                    for hop2 in hop2neighbors:
-                        w2 = g.get_edge_data(neighbor, hop2)['weight']
-                        if hop2 != i and w2 > threshold:
-                            if g.get_edge_data(hop2, i) is None:
-                                g.add_edge(hop2, i, weight=min([w1, w2]))
-                                finish = False
-                            else:
-                                w3 = g.get_edge_data(hop2, i)['weight']
-                                if w3 < w1 and w3 < w2:
-                                    g[hop2][i]['weight'] = min(w1, w2)
-                                    finish = False
-        if finish:
-            break
-    return g
+from utils import to_undirected_graph, augmentation, percentile
 
 def get_partition(graph):
     #first compute the best partition
@@ -88,30 +57,28 @@ def compute_second_density(graph, communities):
 
 # TODO
 
-def get_null_distribution(graph, num_sampler):
-    g = graph.copy()
-    all_weights = list(nx.get_edge_attributes(g, 'weight').values())
+def get_null_distribution(graph, null_samples):
     all_densities = []
-    for num in range(num_sampler):
-        np.random.shuffle(all_weights)
-        for i, edge in enumerate(g.edges()):
-            g.adj[edge[0]][edge[1]]['weight'] = all_weights[i]
-        communities = get_partition(to_undirected_graph(g))
-        choice = np.random.randint(len(communities.keys()))
-        all_densities.append(nx.density(communities[choice]))
+    for comm in null_samples:
+        try:
+            all_densities.append(nx.density(comm))
+        except:
+            print(type(comm))
+            exit()
     mean = np.mean(all_densities)
     std = np.std(all_densities)
     return mean, std
 
-def compute_third_density(graph, communities, num_sampler):
-    mean, std = get_null_distribution(graph, num_sampler)
-    for com, sub_g in communities.items():
+def compute_third_density(graph, communities, null_samples):
+    mean, std = get_null_distribution(graph, null_samples)
+    for _, sub_g in communities.items():
         density = nx.density(sub_g)
         p_value = compute_p(density, mean, std)
         if p_value >= 0.5:
             score = 0
         else:
             score = norm.ppf(1 - p_value)
+        score = np.clip(score, a_min=-8, a_max=8)
         for node in sub_g.nodes():
             graph.node[node]['third_density'] = score
     return graph
@@ -119,7 +86,7 @@ def compute_third_density(graph, communities, num_sampler):
 def small_community_feature(graph, communities, criterion):
     for node in graph.nodes():
         graph.node[node]['small_community'] = 0
-    for com, sub_g in communities.items():
+    for _, sub_g in communities.items():
         num_nodes = sub_g.number_of_nodes()
         if num_nodes <= criterion:
             for node in sub_g.nodes():
@@ -129,7 +96,7 @@ def small_community_feature(graph, communities, criterion):
 def compute_first_strength(graph, communities):
     all_weights = list(nx.get_edge_attributes(graph, 'weight').values())
     network_gaw = GAW(all_weights, mode='simple')
-    for com, sub_g in communities.items():
+    for _, sub_g in communities.items():
         weights = list(nx.get_edge_attributes(sub_g, 'weight').values())
         com_gaw = GAW(weights, mode='simple')
         strength = com_gaw / network_gaw
@@ -138,21 +105,29 @@ def compute_first_strength(graph, communities):
     return graph
 
 def compute_second_strength(graph, communities):
-    for com, sub_g in communities.items():
+    for _, sub_g in communities.items():
         num_nodes = sub_g.number_of_nodes()
         for node in sub_g.nodes():
             graph.node[node]['second_strength'] = graph.node[node]['first_strength'] / num_nodes
     return graph
 
-def community_detection(graph, num_sampler=20, small_criterion=4):
-    threshold = percentile(graph)
+def community_detection(graph, null_samples, num_samples=20, small_criterion=4):
     augmented_g = augmentation(graph)
     communities = get_partition(augmented_g)
     graph = compute_first_density(graph, communities)
     graph = compute_second_density(graph, communities)
-    graph = compute_third_density(graph, communities, num_sampler)
+    graph = compute_third_density(graph, communities, null_samples[:num_samples])
     graph = small_community_feature(graph, communities, small_criterion)
     graph = compute_first_strength(graph, communities)
     graph = compute_second_strength(graph, communities)
     return graph
+
+# from generator import ER_generator, draw_anomalies
+# from utils import generate_null_models
+# graph = ER_generator(n=500, p=0.02, seed=None)
+# graph = draw_anomalies(graph)
+# _, null_samples = generate_null_models(graph, num_models=4, min_size=10)
+# graph = community_detection(graph, null_samples, num_samples=4)
+# print(graph.nodes(data=True))
+# print('FINISH!')
 

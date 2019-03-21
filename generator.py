@@ -98,7 +98,7 @@ def add_trees(graph, nodes_to_add, w, left, middle, right, omega):
         graph.node[r]['type'] = 'tree'
     return graph
 
-def draw_anomalies(graph, w=0.99, n_min=5, n_max=21, left=5, middle=3, right=1, omega=1):
+def draw_anomalies(graph, w=0.999, n_min=5, n_max=21, left=5, middle=3, right=1, omega=1):
     anomaly_graph = graph.copy()
 
     num_anomaly = np.random.randint(low=n_min, high=n_max)

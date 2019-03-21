@@ -9,10 +9,10 @@ for row in rpy2.situation.iter_info():
 import rpy2.robjects.packages as rpackages
 
 # import R's utility package
-utils = rpackages.importr('utils')
+# utils = rpackages.importr('utils')
 
 # select a mirror for R packages
-utils.chooseCRANmirror(ind=1) # select the first mirror in the list
+# utils.chooseCRANmirror(ind=1) # select the first mirror in the list
 
 # # R package names
 # packnames = ('ggplot2', 'devtools', 'netdist')
