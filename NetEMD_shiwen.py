@@ -73,7 +73,7 @@ def NetEMD_score(obs_stat, ref_stats, null_stats):
     nodes = list(obs_stat.keys())
     score_1 = {}
     score_2 = {}
-    if p_value >= 0.05:
+    if p_value > 0.05:
         score_1 = {node: 0 for node in nodes}
         score_2 = {node: 0 for node in nodes}
     else:

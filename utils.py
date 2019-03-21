@@ -267,9 +267,9 @@ def average_precision(preds, labels):
         avg_p += p * (r_next - r)
     return avg_p
 
-pred = [5, 4, 1, 6]
-real = [1, 1, 0, 0]
-print(average_precision(pred, real))
+# pred = [5, 4, 1, 6]
+# real = [1, 1, 0, 0]
+# print(average_precision(pred, real))
 
 
 

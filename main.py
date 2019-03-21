@@ -17,10 +17,10 @@ parameters = [(0.01, 1.0), (0.01, 0.998), (0.01, 0.996),
               (0.03, 1.0), (0.03, 0.998)]
 
 num_models = 10
-num_nodes = 500 #1000
+num_nodes = 1000
 num_basic_mc_samples = 500
-num_references = 5#10
-num_null_models = 5#50
+num_references = 10
+num_null_models = 60
 
 ps = np.linspace(0.001, 0.05, 50)
 ws = np.linspace(0.0, 0.01, 11)
