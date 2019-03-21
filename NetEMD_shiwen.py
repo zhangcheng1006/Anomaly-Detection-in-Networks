@@ -44,23 +44,13 @@ def NetEMD_to_ref(stat, ref_stats):
     return np.mean(dist)
 
 def compute_NetEMD(u1, u2):
-    try:
-        h1 = np.histogram(list(u1), bins=20, density=False)
-        h1_loc = (h1[1][:-1] + h1[1][1:]) / 2
-        h2 = np.histogram(list(u2), bins=20, density=False)
-        h2_loc = (h2[1][:-1] + h2[1][1:]) / 2
-    except:
-        print("IN compute NetEMD")
-        print(u1)
-        print(h1)
-        print(u2)
-        print(h2)
+    h1 = np.histogram(list(u1), bins='auto', density=False)
+    h1_loc = (h1[1][:-1] + h1[1][1:]) / 2
+    h2 = np.histogram(list(u2), bins='auto', density=False)
+    h2_loc = (h2[1][:-1] + h2[1][1:]) / 2
     dhist1 = netdist.dhist(FloatVector(h1_loc), FloatVector(h1[0]))
     dhist2 = netdist.dhist(FloatVector(h2_loc), FloatVector(h2[0]))
-    try:
-        dist = netdist.net_emd(dhist1, dhist2)[0]
-    except:
-        dist = 0
+    dist = netdist.net_emd(dhist1, dhist2)[0]
     return dist
 
 def NetEMD_score(obs_stat, ref_stats, null_stats):
@@ -285,29 +275,17 @@ def NetEMD_features(graph, references, null_samples, num_references=15, num_samp
             print(len(ref.nodes()))
             raise AssertionError
         logging.info("computing matrix stats for refrence No.{}".format(ref_idx))
-        try:
-            ref_stats.append(compute_matrix_stat(ref, normalize=True))
-        except:
-            print(nx.adj_matrix(ref).todense())
-            raise Exception("error caught!")
+        ref_stats.append(compute_matrix_stat(ref, normalize=True))
     null_stats = []
     for null_idx, n_samp in enumerate(null_samples):
         if len(n_samp.nodes()) < 10:
             print(len(n_samp.nodes))
             raise AssertionError
         logging.info("computing matrix stats for null_sample No.{}".format(null_idx))
-        try:
-            null_stats.append(compute_matrix_stat(n_samp, normalize=True))
-        except:
-            print(nx.adj_matrix(n_samp).todense())
-            raise Exception("error caught!")
+        null_stats.append(compute_matrix_stat(n_samp, normalize=True))
     matrix_names = ['upper', 'lower', 'comb', 'rw']
     for comm_idx, community in enumerate(communities_aug):
-        try:
-            logging.info("computing matrix scores for community No.{}/{}".format(comm_idx, len(communities)))
-        except:
-            print(nx.adj_matrix(community).todense())
-            raise Exception("error caught!")
+        logging.info("computing matrix scores for community No.{}/{}".format(comm_idx, len(communities)))
         matrix_scores = compute_matrix_score(community, ref_stats, null_stats) # 4 tuples of (score1, score2)
         for matrix_idx, matrix_name in enumerate(matrix_names):
             for node in community.nodes():
@@ -321,17 +299,8 @@ def NetEMD_features(graph, references, null_samples, num_references=15, num_samp
 
 # _, references = generate_null_models(graph, num_models=3, min_size=5)
 # _, null_samples = generate_null_models(graph, num_models=5, min_size=5)
-# _, references_aug = generate_null_models(graph, num_models=3, min_size=5, augment=True)
-# _, null_samples_aug = generate_null_models(graph, num_models=3, min_size=5, augment=True)
 # graph = NetEMD_features(graph, references, null_samples, num_references=3, num_samples=5)
-# # print(graph.nodes(data=True))
-# all_features = set()
-# for node in graph.nodes():
-#     node_features = set(dict(graph.node[node]).keys())
-#     if len(node_features) != 41:
-#         print("node features: ", node_features)
-#     all_features |= node_features
-# print("all features: ", all_features)
+
 
 # print("FINISH!")
 

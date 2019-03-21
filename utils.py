@@ -242,15 +242,34 @@ def get_parameters(n, ps, ws):
                 res.append((p, w))
     return res
 
-# def precicion_recall(pred, real, *sample_sizes):
-#     pred = np.array(pred)
-#     real = np.array(real)
-#     right_anomaly = (real==1) & (pred==1)
-#     # for 
-#     num_anormaly_samples = np.sum(right_anomaly[:sample_size])
-#     prec = num_anormaly_samples / sample_size
-#     rec = num_anormaly_samples / np.sum(real)
-#     return pred, 
+def precision_recall(preds, labels, *sample_sizes):
+    sorted_label_pred = sorted(zip(labels, preds), key=lambda x: x[1], reverse=True)
+    sorted_labels = np.array([l for l, p in sorted_label_pred])
+    num_anomalies = np.sum(labels)
+    results = []
+    for sample_size in sample_sizes:
+        num_anormaly_samples = np.sum(sorted_labels[:sample_size])
+        prec = num_anormaly_samples / sample_size
+        rec = num_anormaly_samples / num_anomalies
+        results.append((prec, rec))
+    if len(results) == 1:
+        return results[0]
+    else:
+        return results
+
+def average_precision(preds, labels):
+    sample_sizes = list(range(1, len(real)+1))
+    precs_recs = precision_recall(preds, labels, *sample_sizes)
+    avg_p = 0
+    for i in range(len(precs_recs)-1):
+        p, r = precs_recs[i]
+        _, r_next = precs_recs[i+1]
+        avg_p += p * (r_next - r)
+    return avg_p
+
+pred = [5, 4, 1, 6]
+real = [1, 1, 0, 0]
+print(average_precision(pred, real))
 
 
 
