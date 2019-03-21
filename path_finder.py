@@ -91,17 +91,11 @@ def get_next_size_paths(graph, paths, beamsize=5000):
 
 
 
-def get_null_distribution(graph, num_sampler=500, min_path=2, max_path=20, beamsize=5000):
-    g = graph.copy()
-    all_weights = list(nx.get_edge_attributes(g, 'weight').values())
-    all_largest_weights = np.zeros((max_path - min_path + 1, num_sampler))
-    for num in range(num_sampler):
-        np.random.shuffle(all_weights)
-        for i, edge in enumerate(g.edges()):
-            g.adj[edge[0]][edge[1]]['weight'] = all_weights[i]
-            
+def get_null_distribution(null_samples, min_path=2, max_path=20, beamsize=5000):
+    all_largest_weights = np.zeros((max_path - min_path + 1, len(null_samples)))
+    for num, sample in enumerate(null_samples):
         # print("NULL DISTRIBUTION: Finding the 2th paths...")
-        paths = get_base_paths(g, beamsize)
+        paths = get_base_paths(sample, beamsize)
         largest_weight = 0
         for path in paths:
             weight = sum(path[0][1])
@@ -110,7 +104,7 @@ def get_null_distribution(graph, num_sampler=500, min_path=2, max_path=20, beams
         all_largest_weights[0, num] = largest_weight
         for path_size in range(max_path - min_path):
             # print("NULL DISTRIBUTION: Finding the " + str(path_size+3) + "th paths...")
-            paths = get_next_size_paths(graph, paths)
+            paths = get_next_size_paths(sample, paths)
             largest_weight = 0
             for path in paths:
                 weight = sum(path[0][1])
@@ -122,8 +116,9 @@ def get_null_distribution(graph, num_sampler=500, min_path=2, max_path=20, beams
     return null_mean, null_std
 
 
-def path_features(graph, num_samples=500, min_path=2, max_path=20, beamsize=5000):
-    null_mean, null_std = get_null_distribution(graph, num_samples, min_path, max_path, beamsize)
+def path_features(graph, null_samples, num_samples=500, min_path=2, max_path=20, beamsize=5000):
+    assert len(null_samples) >= num_samples
+    null_mean, null_std = get_null_distribution(null_samples[:num_samples], min_path, max_path, beamsize)
     for path_size in range(min_path, max_path+1):
         print("Find all " + str(path_size) + "th paths...")
         if path_size == 2:
@@ -147,9 +142,12 @@ def path_features(graph, num_samples=500, min_path=2, max_path=20, beamsize=5000
     return graph
 
 # from generator import ER_generator, draw_anomalies
+# from utils import generate_null_models
 # graph = ER_generator(n=500, p=0.02, seed=None)
 # graph = draw_anomalies(graph)
-# graph = path_features(graph, num_samples=4)
+# null_models, _ = generate_null_models(graph, num_models=5)
+# graph = path_features(graph, null_models, num_samples=4)
+# print("FINISH!")
 # # print(graph.nodes(data=True))
 # all_features = set()
 # for node in graph.nodes():

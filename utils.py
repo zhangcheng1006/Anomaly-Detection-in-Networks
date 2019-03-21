@@ -66,35 +66,36 @@ def generate_null_models(graph, num_models=10, min_size=20, augment=False):
     """
     null_models = []
     null_comms = []
+    edge_weights = graph.edges.data('weight')
+    out_stubs = [e[0] for e in edge_weights]
+    in_stubs = [e[1] for e in edge_weights]
+    weights = [e[2] for e in edge_weights]
     num_trials = 0
     while len(null_models) < num_models:
         logging.info("Generating {}-th null model".format(len(null_models)+1))
-        edge_weights = graph.edges.data('weight')
-        out_stubs = [e[0] for e in edge_weights]
-        in_stubs = [e[1] for e in edge_weights]
-        weights = [e[2] for e in edge_weights]
         random.shuffle(in_stubs)
         random.shuffle(weights)
         new_graph = nx.DiGraph()
         new_edge_weights = [(out_node, in_node, w) for out_node, in_node, w in zip(out_stubs, in_stubs, weights) if out_node!=in_node]
         new_graph.add_weighted_edges_from(new_edge_weights)
+        new_graph = nx.convert_node_labels_to_integers(new_graph)
         if augment:
             new_graph = augmentation(new_graph)
         logging.info("Partitioning graph")
         comm_nodes = partition_graph(new_graph)
-        comm_nodes_ = [comm for comm in comm_nodes[1:] if len(comm)>=2*min_size]
+        comm_nodes_ = [comm for comm in comm_nodes if len(comm)>=2*min_size]
         if len(comm_nodes_) == 0:
             if num_trials == 10:
                 logging.warning("Maximum trial reached, take currently biggest community")
-                comm = max(comm_nodes, key=len)
+                comm_chosen = max(comm_nodes, key=len)
                 num_trials = 0
             else:
                 logging.warning("No community with enough size, resampling")
                 num_trials += 1
         else:
             num_trials = 0
-            comm = comm_nodes_[np.random.choice(range(len(comm_nodes_)))]
-        null_comms.append(new_graph.subgraph(comm).copy())
+            comm_chosen = comm_nodes_[np.random.choice(range(len(comm_nodes_)))]
+        null_comms.append(new_graph.subgraph(comm_chosen).copy())
         null_models.append(new_graph)
     return null_models, null_comms
         
@@ -208,4 +209,7 @@ def augmentation(graph):
 #     prec = num_anormaly_samples / sample_size
 #     rec = num_anormaly_samples / np.sum(real)
 #     return pred, 
+
+
+
 

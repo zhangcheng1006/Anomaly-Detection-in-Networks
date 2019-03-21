@@ -283,6 +283,7 @@ def spectral_features(graph, null_samples, num_samples=500):
         for feature_name, feature_scores in comm_total_scores.items():
             for nid, node in enumerate(nodes):
                 graph.node[node][feature_name] = feature_scores[nid]
+    logging.info("Spectral features all ready!!")
     return graph
 
 # from generator import ER_generator, draw_anomalies

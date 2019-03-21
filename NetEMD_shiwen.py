@@ -45,9 +45,9 @@ def NetEMD_to_ref(stat, ref_stats):
 
 def compute_NetEMD(u1, u2):
     try:
-        h1 = np.histogram(list(u1), bins=20, density=True)
+        h1 = np.histogram(list(u1), bins=20, density=False)
         h1_loc = (h1[1][:-1] + h1[1][1:]) / 2
-        h2 = np.histogram(list(u2), bins=20, density=True)
+        h2 = np.histogram(list(u2), bins=20, density=False)
         h2_loc = (h2[1][:-1] + h2[1][1:]) / 2
     except:
         print("IN compute NetEMD")
@@ -80,16 +80,21 @@ def NetEMD_score(obs_stat, ref_stats, null_stats):
     dist_obs_ref = NetEMD_to_ref(obs_normed, ref_stats)
     dist_null_ref = np.array([NetEMD_to_ref(null_stat, ref_stats) for null_stat in null_stats])
     p_value = (np.sum(dist_null_ref>dist_obs_ref) + 1) / len(null_stats)
+    nodes = list(obs_stat.keys())
     score_1 = {}
     score_2 = {}
-    scaled_stat = (obs_values-obs_mean) / obs_std if obs_std!= 0 else obs_values-obs_mean
-    scaled_stat = np.abs(scaled_stat)
-    nodes = list(obs_stat.keys())
-    p_score = norm.ppf(1-p_value)
-    top5_args = np.argsort(scaled_stat)[::-1][:int(np.ceil(len(nodes)*0.05))]
-    for nid, node in enumerate(nodes):
-        score_1[node] = 0 if scaled_stat[nid]<2 else scaled_stat[nid]
-        score_2[node] = p_score if nid in top5_args else 0
+    if p_value >= 0.05:
+        score_1 = {node: 0 for node in nodes}
+        score_2 = {node: 0 for node in nodes}
+    else:
+        scaled_stat = (obs_values-obs_mean) / obs_std if obs_std!= 0 else obs_values-obs_mean
+        scaled_stat = np.abs(scaled_stat)
+        p_score = norm.ppf(1-p_value)
+        p_score = np.clip(p_score, a_min=-8, a_max=8)
+        top5_args = np.argsort(scaled_stat)[::-1][:int(np.ceil(len(nodes)*0.05))]
+        for nid, node in enumerate(nodes):
+            score_1[node] = 0 if scaled_stat[nid]<2 else scaled_stat[nid]
+            score_2[node] = p_score if nid in top5_args else 0
     return score_1, score_2
 
 def compute_strength(g, strength_type=None, normalize=False):
@@ -252,23 +257,23 @@ def NetEMD_features(graph, references, null_samples, num_references=15, num_samp
     references = references[:num_references]
     assert len(null_samples) >= num_samples
     null_samples = null_samples[:num_samples]
-    # for comm_idx, community in enumerate(communities):
-    #     logging.info("computing strength scores for community No.{}/{}".format(comm_idx, len(communities)))
-    #     strength_scores = compute_strength_score(community, references, null_samples)
-    #     strength_names = ['in_strength_1', 'in_strength_2', 'out_strength_1', 'out_strength_2', 'in_out_strength_1', 'in_out_strength_2']
-    #     for strength_name, strength_score in zip(strength_names, strength_scores):
-    #         for node, score in strength_score.items():
-    #             assert graph.node[node].get(strength_name) is None
-    #             graph.node[node][strength_name] = score
-    #     logging.info("computing motif scores for community No.{}/{}".format(comm_idx, len(communities)))
-    #     motif_scores = compute_motif_score(community, references, null_samples)
-    #     for idx in range(13):
-    #         motif_score = motif_scores[idx]
-    #         motif_id = idx + 4
-    #         for score_idx in [1, 2]:
-    #             for node, score in motif_score[score_idx-1].items():
-    #                 assert graph.node[node].get('motif_{}_{}'.format(motif_id, score_idx)) is None
-    #                 graph.node[node]['motif_{}_{}'.format(motif_id, score_idx)] = score
+    for comm_idx, community in enumerate(communities):
+        logging.info("computing strength scores for community No.{}/{}".format(comm_idx, len(communities)))
+        strength_scores = compute_strength_score(community, references, null_samples)
+        strength_names = ['in_strength_1', 'in_strength_2', 'out_strength_1', 'out_strength_2', 'in_out_strength_1', 'in_out_strength_2']
+        for strength_name, strength_score in zip(strength_names, strength_scores):
+            for node, score in strength_score.items():
+                assert graph.node[node].get(strength_name) is None
+                graph.node[node][strength_name] = score
+        logging.info("computing motif scores for community No.{}/{}".format(comm_idx, len(communities)))
+        motif_scores = compute_motif_score(community, references, null_samples)
+        for idx in range(13):
+            motif_score = motif_scores[idx]
+            motif_id = idx + 4
+            for score_idx in [1, 2]:
+                for node, score in motif_score[score_idx-1].items():
+                    assert graph.node[node].get('motif_{}_{}'.format(motif_id, score_idx)) is None
+                    graph.node[node]['motif_{}_{}'.format(motif_id, score_idx)] = score
     logging.info("generating augmented graph")
     graph_aug = augmentation(graph)
     logging.info("partition augmented graph")
@@ -306,19 +311,19 @@ def NetEMD_features(graph, references, null_samples, num_references=15, num_samp
         matrix_scores = compute_matrix_score(community, ref_stats, null_stats) # 4 tuples of (score1, score2)
         for matrix_idx, matrix_name in enumerate(matrix_names):
             for node in community.nodes():
-                graph.node[node]['{}_1'.format(matrix_name)] = matrix_scores[matrix_idx][0][node]
-                graph.node[node]['{}_2'.format(matrix_name)] = matrix_scores[matrix_idx][1][node]
+                graph.node[node]['NetEMD_{}_1'.format(matrix_name)] = matrix_scores[matrix_idx][0][node]
+                graph.node[node]['NetEMD_{}_2'.format(matrix_name)] = matrix_scores[matrix_idx][1][node]
     return graph
 
-from generator import ER_generator, draw_anomalies
-graph = ER_generator(n=500, p=0.01, seed=None)
-graph = draw_anomalies(graph)
+# from generator import ER_generator, draw_anomalies
+# graph = ER_generator(n=500, p=0.01, seed=None)
+# graph = draw_anomalies(graph)
 
-_, references = generate_null_models(graph, num_models=3, min_size=5)
-_, null_samples = generate_null_models(graph, num_models=5, min_size=5)
+# _, references = generate_null_models(graph, num_models=3, min_size=5)
+# _, null_samples = generate_null_models(graph, num_models=5, min_size=5)
 # _, references_aug = generate_null_models(graph, num_models=3, min_size=5, augment=True)
 # _, null_samples_aug = generate_null_models(graph, num_models=3, min_size=5, augment=True)
-graph = NetEMD_features(graph, references, null_samples, num_references=3, num_samples=5)
+# graph = NetEMD_features(graph, references, null_samples, num_references=3, num_samples=5)
 # # print(graph.nodes(data=True))
 # all_features = set()
 # for node in graph.nodes():
@@ -328,6 +333,6 @@ graph = NetEMD_features(graph, references, null_samples, num_references=3, num_s
 #     all_features |= node_features
 # print("all features: ", all_features)
 
-print("FINISH!")
+# print("FINISH!")
 
 
