@@ -122,8 +122,8 @@ def get_null_distribution(graph, num_sampler=500, min_path=2, max_path=20, beams
     return null_mean, null_std
 
 
-def assign_path_score(graph, num_sampler=500, min_path=2, max_path=20, beamsize=5000):
-    null_mean, null_std = get_null_distribution(graph, num_sampler, min_path, max_path, beamsize)
+def path_features(graph, num_samples=500, min_path=2, max_path=20, beamsize=5000):
+    null_mean, null_std = get_null_distribution(graph, num_samples, min_path, max_path, beamsize)
     for path_size in range(min_path, max_path+1):
         print("Find all " + str(path_size) + "th paths...")
         if path_size == 2:
@@ -145,4 +145,17 @@ def assign_path_score(graph, num_sampler=500, min_path=2, max_path=20, beamsize=
                     graph.node[node]['path_'+str(path_size)] = score
     
     return graph
+
+# from generator import ER_generator, draw_anomalies
+# graph = ER_generator(n=500, p=0.02, seed=None)
+# graph = draw_anomalies(graph)
+# graph = path_features(graph, num_samples=4)
+# # print(graph.nodes(data=True))
+# all_features = set()
+# for node in graph.nodes():
+#     node_features = set(dict(graph.node[node]).keys())
+#     if len(node_features) != 41:
+#         print("node features: ", node_features)
+#     all_features |= node_features
+# print("all features: ", all_features)
 

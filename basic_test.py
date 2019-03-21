@@ -114,7 +114,7 @@ def compute_node_gaw_scores(edges, null_params):
     scores = [norm.ppf(1-p) if p<0.05 else 0 for p in p_values]
     return scores
 
-def basic_test(G):
+def basic_features(graph, num_samples=10000):
     """Compute the basic scores of all nodes in the graph, and attach the scores to nodes as an attribute `basic_score`.
     Parameters:
     -----------
@@ -124,29 +124,35 @@ def basic_test(G):
     --------
         scores: dict with nodes as keys and nodes' scores as values
     """
-    all_weights = list(nx.get_edge_attributes(G, 'weight').values())
-    degrees = G.degree()
+    all_weights = list(nx.get_edge_attributes(graph, 'weight').values())
+    degrees = graph.degree()
     degree_values = [value for _, value in degrees]
     degree_avg = np.mean(degree_values)
     degree_std = np.std(degree_values)
-    null_params = {degree: monte_carlo_sampler(degree, all_weights) for degree in set(degree_values)}
+    null_params = {degree: monte_carlo_sampler(degree, all_weights, num_samples) for degree in set(degree_values)}
 
-    scores = {}
-    for node in G.nodes():
-        node_score_dict = {}  # to store different scores of this node
-        edge_weights = [data[2] for data in G.in_edges(node, data='weight')] + [data[2] for data in G.out_edges(node, data='weight')]
+    for node in graph.nodes():
+        edge_weights = [data[2] for data in graph.in_edges(node, data='weight')] + [data[2] for data in graph.out_edges(node, data='weight')]
         gaw_scores = compute_node_gaw_scores(edge_weights, null_params)
 
-        node_score_dict['gaw_score'] = gaw_scores[0]
-        G.node[node]['gaw_score'] = gaw_scores[0]
-        node_score_dict['gaw10_score'] = gaw_scores[1]
-        G.node[node]['gaw10_score'] = gaw_scores[1]
-        node_score_dict['gaw20_score'] = gaw_scores[2]
-        G.node[node]['gaw20_score'] = gaw_scores[2]
+        graph.node[node]['gaw_score'] = gaw_scores[0]
+        graph.node[node]['gaw10_score'] = gaw_scores[1]
+        graph.node[node]['gaw20_score'] = gaw_scores[2]
         # standard degree
         standard_degree = (len(edge_weights) - degree_avg) / degree_std
-        node_score_dict['degree_std'] = standard_degree
-        G.node[node]['degree_std'] = standard_degree
-        scores[node] = node_score_dict
-    return scores
+        graph.node[node]['degree_std'] = standard_degree
+    return graph
+
+# from generator import ER_generator, draw_anomalies
+# graph = ER_generator(n=500, p=0.02, seed=None)
+# graph = draw_anomalies(graph)
+# graph = basic_features(graph)
+# # print(graph.nodes(data=True))
+# all_features = set()
+# for node in graph.nodes():
+#     node_features = set(dict(graph.node[node]).keys())
+#     if len(node_features) != 41:
+#         print("node features: ", node_features)
+#     all_features |= node_features
+# print("all features: ", all_features)
 
