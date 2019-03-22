@@ -4,6 +4,8 @@ GAW subject to a random distribution (null hypothesis)."""
 import networkx as nx
 import numpy as np
 from scipy.stats import norm
+import logging
+logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # def GAW(weights, mode="multi"):
 #     """Computes the GAW statistics of a set of edge weights.
@@ -91,7 +93,7 @@ def compute_p(value, avg, std):
     --------
         p_value: float, the computed p-value
     """
-    
+
     return 1 - norm.cdf(value, loc=avg, scale=std)
 
 def compute_node_gaw_scores(edges, null_params):
@@ -130,6 +132,7 @@ def basic_features(graph, num_samples=10000):
     degree_values = [value for _, value in degrees]
     degree_avg = np.mean(degree_values)
     degree_std = np.std(degree_values)
+    logging.info("Running Monte-Carlo simulations")
     null_params = {degree: monte_carlo_sampler(degree, all_weights, num_samples) for degree in set(degree_values)}
 
     for node in graph.nodes():

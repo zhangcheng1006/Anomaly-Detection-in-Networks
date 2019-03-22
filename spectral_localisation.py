@@ -264,7 +264,6 @@ def spectral_features(graph, null_samples, num_samples=500):
     logging.info("partition graph")
     communities = [graph.subgraph(comm_nodes) for comm_nodes in partition_graph(graph) if len(comm_nodes) > 4]
     logging.info("got {} communities".format(len(communities)))
-    logging.info("generating null samples")
     assert len(null_samples) >= num_samples
     null_samples = null_samples[:num_samples]
     null_matrices = [[], [], [], []]

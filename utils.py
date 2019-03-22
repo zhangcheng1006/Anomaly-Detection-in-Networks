@@ -34,34 +34,6 @@ def partition_graph(G):
         comm_nodes[comm_id].append(node)
     return comm_nodes
 
-# def generate_null_model(num_models=10, min_size=20, n=10000, p=0.001, augment=False):
-#     """Generates a number of null modesl. If partition is True, 
-#     the graph is partitionned and only one community is chosen randomly.
-#     """
-#     models = []
-#     num_trials = 0
-#     while len(models) < num_models:
-#         logging.info("Generating {}-th null model".format(len(models)+1))
-#         ER_graph = ER_generator(n, p, seed=None)
-#         if augment:
-#             ER_graph = augmentation(ER_graph)
-#         logging.info("Partitioning graph")
-#         comm_nodes = partition_graph(ER_graph)
-#         comm_nodes_ = [comm for comm in comm_nodes if len(comm)>=2*min_size]
-#         if len(comm_nodes_) == 0:
-#             logging.warning("No community with enough size, resampling")
-#             if num_trials == 10:
-#                 logging.warning("Maximum trial reached, take currently biggest community")
-#                 comm = max(comm_nodes, key=len)
-#                 num_trials = 0
-#             else:
-#                 num_trials += 1
-#         else:
-#             num_trials = 0
-#             comm = comm_nodes_[np.random.choice(range(len(comm_nodes_)))]
-#             models.append(ER_graph.subgraph(comm).copy())
-#     return models
-
 def generate_null_models(graph, num_models=10, min_size=20, augment=False):
     """Generates a number of null modesl. If partition is True, 
     the graph is partitionned and only one community is chosen randomly.
@@ -83,7 +55,7 @@ def generate_null_models(graph, num_models=10, min_size=20, augment=False):
         new_graph = nx.convert_node_labels_to_integers(new_graph)
         if augment:
             new_graph = augmentation(new_graph)
-        logging.info("Partitioning graph")
+        logging.debug("Partitioning graph")
         comm_nodes = partition_graph(new_graph)
         comm_nodes_ = [comm for comm in comm_nodes if len(comm)>=2*min_size]
         if len(comm_nodes_) == 0:
@@ -127,9 +99,9 @@ def comm_eigenvectors(comm, num_vectors=20, verbose=False):
     # eigen vectors
     if W.shape[0] > 2*num_vectors:
         try:
-            logging.info("Using sparse method to compute eigen vectors")
+            logging.debug("Using sparse method to compute eigen vectors")
             _, W_vectors_upper = sparse.linalg.eigsh(W_sym, k=num_vectors, sigma=0, which='LM')
-            logging.info("Using sparse method to compute eigen vectors")
+            logging.debug("Using sparse method to compute eigen vectors")
             _, W_vectors_lower = sparse.linalg.eigsh(W_sym, k=num_vectors, which='LM')
         except:
             logging.warning("Sparse method doesn't converge.")
@@ -145,7 +117,7 @@ def comm_eigenvectors(comm, num_vectors=20, verbose=False):
         W_vectors_lower = W_vectors[:, W_sort_index[middle:][::-1]]   # big eigen values
     if W.shape[0] > num_vectors+2:
         try:
-            logging.info("Using sparse method to compute eigen vectors")
+            logging.debug("Using sparse method to compute eigen vectors")
             _, comb_vectors = sparse.linalg.eigsh(L_comb, k=num_vectors+1, sigma=0, which='LM')
             comb_vectors = comb_vectors[:, 1:]
         except:
@@ -154,7 +126,7 @@ def comm_eigenvectors(comm, num_vectors=20, verbose=False):
             comb_sort_index = break_tie_argsort(comb_values)
             comb_vectors = comb_vectors[:, comb_sort_index[1:21]]
         try:
-            logging.info("Using sparse method to compute eigen vectors")
+            logging.debug("Using sparse method to compute eigen vectors")
             _, rw_vectors = sparse.linalg.eigsh(L_rw, k=num_vectors+1, which='LM')
             rw_vectors = rw_vectors[:, 1:]
         except scipy.sparse.linalg.ArpackNoConvergence:
@@ -258,7 +230,7 @@ def precision_recall(preds, labels, *sample_sizes):
         return results
 
 def average_precision(preds, labels):
-    sample_sizes = list(range(1, len(real)+1))
+    sample_sizes = list(range(1, len(labels)+1))
     precs_recs = precision_recall(preds, labels, *sample_sizes)
     avg_p = 0
     for i in range(len(precs_recs)-1):
@@ -266,10 +238,6 @@ def average_precision(preds, labels):
         _, r_next = precs_recs[i+1]
         avg_p += p * (r_next - r)
     return avg_p
-
-# pred = [5, 4, 1, 6]
-# real = [1, 1, 0, 0]
-# print(average_precision(pred, real))
 
 
 
