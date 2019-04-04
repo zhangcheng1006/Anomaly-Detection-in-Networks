@@ -1,3 +1,7 @@
+'''
+This file includes the implementation of spectral localisation module.
+'''
+
 import numpy as np
 import scipy
 from scipy import sparse

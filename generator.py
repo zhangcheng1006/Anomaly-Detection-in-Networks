@@ -1,3 +1,7 @@
+'''
+This file includes data generator.
+'''
+
 import networkx as nx
 import numpy as np
 

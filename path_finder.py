@@ -1,3 +1,7 @@
+'''
+This file includes the implementation of path finder module.
+'''
+
 import numpy as np
 import heapq as hq
 import networkx as nx
@@ -144,6 +148,7 @@ def path_features(graph, null_samples, num_samples=500, min_path=2, max_path=20,
     
     return graph
 
+# # module test code
 # from generator import ER_generator, draw_anomalies
 # from utils import generate_null_models
 # graph = ER_generator(n=500, p=0.02, seed=None)

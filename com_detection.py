@@ -1,3 +1,7 @@
+'''
+This file includes the implementation of community detection module.
+'''
+
 import networkx as nx
 import numpy as np
 import community
@@ -54,8 +58,6 @@ def compute_second_density(graph, communities):
     #     for node in sub_g.nodes():
     #         graph.node[node]['second_density'] = stat
     # return graph
-
-# TODO
 
 def get_null_distribution(graph, null_samples):
     all_densities = []

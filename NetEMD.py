@@ -1,3 +1,7 @@
+'''
+This file includes the implementation of NetEMD module.
+'''
+
 from rpy2.robjects import FloatVector
 import rpy2.robjects.packages as rpackages
 netdist = rpackages.importr('netdist')
@@ -41,7 +45,7 @@ def compute_NetEMD(u1, u2):
     h1_loc = (h1[1][:-1] + h1[1][1:]) / 2
     u2 = np.array(list(u2))
     u2 = u2 * (u2 > 1e-12)
-    h2 = np.histogram(list(u2), bins='auto', density=False)
+    h2 = np.histogram(u2, bins='auto', density=False)
     h2_loc = (h2[1][:-1] + h2[1][1:]) / 2
     dhist1 = netdist.dhist(FloatVector(h1_loc), FloatVector(h1[0]))
     dhist2 = netdist.dhist(FloatVector(h2_loc), FloatVector(h2[0]))
@@ -219,8 +223,11 @@ def compute_matrix_score(g, ref_stats, null_stats):
             obs_stat_ij = obs_stat[i][j]
             ref_stats_ij = [ref[i][j] for ref in ref_stats]
             null_stats_ij = [n_samp[i][j] for n_samp in null_stats]
-            matrix_score_ij_1, matrix_score_ij_2 = NetEMD_score(obs_stat_ij, ref_stats_ij, null_stats_ij)
-            matrix_score += np.array([list(matrix_score_ij_1.values()), list(matrix_score_ij_2.values())])
+            try:
+                matrix_score_ij_1, matrix_score_ij_2 = NetEMD_score(obs_stat_ij, ref_stats_ij, null_stats_ij)
+                matrix_score += np.array([list(matrix_score_ij_1.values()), list(matrix_score_ij_2.values())])
+            except MemoryError:
+                logging.warning("Memory Error")
         matrix_scores.append((dict(zip(nodes, matrix_score[0])), dict(zip(nodes, matrix_score[1]))))
     return matrix_scores
 

@@ -12,11 +12,8 @@ from spectral_localisation import spectral_features
 from NetEMD import NetEMD_features
 from path_finder import path_features
 
-parameters = [(0.01, 1.0), (0.01, 0.998), (0.01, 0.996), 
-              (0.01, 0.994), (0.02, 1.0), (0.02, 0.998), 
-              (0.03, 1.0), (0.03, 0.998)]
 
-num_models = 10
+num_models = 20
 num_nodes = 1000
 num_basic_mc_samples = 500
 num_references = 10
@@ -27,7 +24,7 @@ ws = np.linspace(0.0, 0.01, 11)
 candidate_parameters = get_parameters(num_nodes, ps, ws)
 num_cand_param = len(candidate_parameters)
 
-for model_id in range(3, num_models):
+for model_id in range(num_models):
     p, w = candidate_parameters[np.random.choice(range(num_cand_param))]
     logging.info("Computing {}-th/{} model (p={:.3f}, w={:.3f})".format(model_id, num_models, p, w))
     graph = ER_generator(n=num_nodes, p=p, seed=None)
@@ -35,11 +32,6 @@ for model_id in range(3, num_models):
     logging.info("\n\nGenerating null models\n\n")
     _, references = generate_null_models(graph, num_models=num_references, min_size=20)
     null_samples_whole, null_samples = generate_null_models(graph, num_models=num_null_models, min_size=20)
-
-    logging.info("\n\nGenerating basic features\n\n")
-    graph = basic_features(graph, num_samples=num_basic_mc_samples)
-    logging.info("\n\nGenerating community features\n\n")
-    graph = community_detection(graph, null_samples, num_samples=20)
     logging.info("\n\nGenerating NetEMD features\n\n")
     graph = NetEMD_features(graph, references, null_samples, num_references=num_references, num_samples=num_null_models)
     logging.info("\n\nGenerating basic features\n\n")

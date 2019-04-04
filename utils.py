@@ -1,3 +1,7 @@
+'''
+This file includes some util functions.
+'''
+
 import random
 import numpy as np
 import scipy
@@ -218,24 +222,26 @@ def precision_recall(preds, labels, *sample_sizes):
     sorted_label_pred = sorted(zip(labels, preds), key=lambda x: x[1], reverse=True)
     sorted_labels = np.array([l for l, p in sorted_label_pred])
     num_anomalies = np.sum(labels)
-    results = []
+    precs = []
+    recs = []
     for sample_size in sample_sizes:
         num_anormaly_samples = np.sum(sorted_labels[:sample_size])
         prec = num_anormaly_samples / sample_size
         rec = num_anormaly_samples / num_anomalies
-        results.append((prec, rec))
-    if len(results) == 1:
-        return results[0]
+        precs.append(prec)
+        recs.append(rec)
+    if len(recs) == 1:
+        return precs[0], recs[0]
     else:
-        return results
+        return precs, recs
 
 def average_precision(preds, labels):
     sample_sizes = list(range(1, len(labels)+1))
-    precs_recs = precision_recall(preds, labels, *sample_sizes)
+    precs, recs = precision_recall(preds, labels, *sample_sizes)
     avg_p = 0
-    for i in range(len(precs_recs)-1):
-        p, r = precs_recs[i]
-        _, r_next = precs_recs[i+1]
+    for i in range(len(precs)-1):
+        p, r = precs[i], recs[i]
+        r_next = recs[i+1]
         avg_p += p * (r_next - r)
     return avg_p
 
